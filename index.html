@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#FF4F00" />
+  <meta name="description" content="10-4 — A high-quality PWA focus timer with topographic map visuals." />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="10-4" />
+  <title>10-4 Timer</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body data-theme="dark">
+
+  <!-- ══════════════════════════════════════════════════════════════
+       APP SHELL
+  ══════════════════════════════════════════════════════════════ -->
+  <div id="app">
+
+    <!-- Top bar -->
+    <header class="topbar">
+      <span class="topbar-title">10-4</span>
+      <div class="topbar-actions">
+        <button class="icon-btn" id="muteBtn" aria-label="Toggle mute" title="Toggle mute">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <path class="sound-waves" d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            <path class="sound-waves" d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+            <line class="mute-line" x1="23" y1="1" x2="1" y2="23" style="display:none"/>
+          </svg>
+        </button>
+        <button class="icon-btn" id="themeBtn" aria-label="Toggle theme" title="Toggle theme">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"/>
+            <line x1="12" y1="1" x2="12" y2="3"/>
+            <line x1="12" y1="21" x2="12" y2="23"/>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+            <line x1="1" y1="12" x2="3" y2="12"/>
+            <line x1="21" y1="12" x2="23" y2="12"/>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Tab navigation -->
+    <nav class="tab-bar" role="tablist">
+      <button class="tab-btn active" role="tab" aria-selected="true"  data-tab="timer"    aria-controls="tab-timer">⏱ Timer</button>
+      <button class="tab-btn"        role="tab" aria-selected="false" data-tab="stats"    aria-controls="tab-stats">📊 Stats</button>
+      <button class="tab-btn"        role="tab" aria-selected="false" data-tab="settings" aria-controls="tab-settings">⚙️ Settings</button>
+    </nav>
+
+    <!-- ── TIMER TAB ─────────────────────────────────────── -->
+    <section id="tab-timer" class="tab-panel active" role="tabpanel">
+
+      <!-- Mode toggle pill -->
+      <div class="mode-toggle-wrap">
+        <div class="mode-toggle" role="group" aria-label="Timer mode">
+          <button class="mode-btn active" id="modeCountdown" data-mode="countdown">Countdown</button>
+          <button class="mode-btn"        id="modeCountup"   data-mode="countup">Stopwatch</button>
+        </div>
+      </div>
+
+      <!-- Preset row -->
+      <div class="preset-row" role="group" aria-label="Presets">
+        <button class="preset-btn active" data-preset="focus"    aria-pressed="true">Focus 25</button>
+        <button class="preset-btn"        data-preset="study"    aria-pressed="false">Study 50</button>
+        <button class="preset-btn"        data-preset="pomodoro" aria-pressed="false">🍅 Pomo</button>
+        <button class="preset-btn"        data-preset="custom"   aria-pressed="false">Custom</button>
+      </div>
+
+      <!-- Pomodoro phase badge -->
+      <div id="pomoBadge" class="pomo-badge hidden">
+        <span id="pomoPhaseLabel">Work</span>
+        <span class="pomo-cycle-count" id="pomoCycleCount">Cycle 1</span>
+      </div>
+
+      <!-- Custom time inputs -->
+      <div id="customInputs" class="custom-inputs hidden">
+        <label>
+          <span>Minutes</span>
+          <input type="number" id="customMins" min="0" max="99" value="10" aria-label="Custom minutes" />
+        </label>
+        <label>
+          <span>Seconds</span>
+          <input type="number" id="customSecs" min="0" max="59" value="0"  aria-label="Custom seconds" />
+        </label>
+        <button class="pill-btn secondary" id="applyCustomBtn">Apply</button>
+      </div>
+
+      <!-- ── Topo Map Timer Visual ── -->
+      <div class="timer-visual-wrap" aria-label="Timer visual">
+        <div class="timer-card">
+
+          <!-- SVG topo map container -->
+          <div class="topo-container" aria-hidden="true">
+            <svg id="topoSvg" class="topo-svg" viewBox="0 0 320 320" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+              <!-- Clip path that reveals the fill from bottom to top -->
+              <defs>
+                <clipPath id="fillClip">
+                  <rect id="fillRect" x="0" y="320" width="320" height="0" />
+                </clipPath>
+                <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur stdDeviation="3" result="blur"/>
+                  <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+                </filter>
+              </defs>
+
+              <!-- Background topo lines (always visible, dimmed) -->
+              <g class="topo-lines-bg" stroke="currentColor" stroke-width="1.2" fill="none" opacity="0.25">
+                <!-- Concentric topo contours -->
+                <ellipse cx="160" cy="200" rx="140" ry="80"/>
+                <ellipse cx="160" cy="195" rx="120" ry="65"/>
+                <ellipse cx="160" cy="190" rx="100" ry="52"/>
+                <ellipse cx="160" cy="185" rx="82"  ry="40"/>
+                <ellipse cx="160" cy="180" rx="65"  ry="30"/>
+                <ellipse cx="160" cy="175" rx="50"  ry="22"/>
+                <ellipse cx="160" cy="170" rx="36"  ry="15"/>
+                <ellipse cx="160" cy="165" rx="22"  ry="9"/>
+                <ellipse cx="160" cy="160" rx="10"  ry="4"/>
+                <!-- Ridge lines -->
+                <path d="M160 160 Q140 140 120 100 Q100 60 110 30"/>
+                <path d="M160 160 Q180 140 200 100 Q220 60 210 30"/>
+                <path d="M160 160 Q155 130 150 90 Q145 50 155 20"/>
+                <path d="M160 160 Q165 130 170 90 Q175 50 165 20"/>
+                <!-- Extra contour details -->
+                <path d="M20 210 Q60 195 100 200 Q140 205 160 200 Q180 195 220 200 Q260 205 300 210"/>
+                <path d="M30 230 Q70 218 110 222 Q145 226 160 222 Q175 218 210 222 Q250 226 290 230"/>
+                <path d="M10 250 Q50 240 90 244 Q130 248 160 244 Q190 248 230 244 Q270 240 310 250"/>
+                <path d="M0 270  Q40 262 80 265 Q120 268 160 265 Q200 268 240 265 Q280 262 320 270"/>
+                <path d="M0 290  Q40 285 80 287 Q120 289 160 287 Q200 289 240 287 Q280 285 320 290"/>
+              </g>
+
+              <!-- Orange fill topo lines (revealed by clip) -->
+              <g class="topo-lines-fill" stroke="#FF4F00" stroke-width="1.5" fill="none" clip-path="url(#fillClip)" filter="url(#glow)">
+                <ellipse cx="160" cy="200" rx="140" ry="80"/>
+                <ellipse cx="160" cy="195" rx="120" ry="65"/>
+                <ellipse cx="160" cy="190" rx="100" ry="52"/>
+                <ellipse cx="160" cy="185" rx="82"  ry="40"/>
+                <ellipse cx="160" cy="180" rx="65"  ry="30"/>
+                <ellipse cx="160" cy="175" rx="50"  ry="22"/>
+                <ellipse cx="160" cy="170" rx="36"  ry="15"/>
+                <ellipse cx="160" cy="165" rx="22"  ry="9"/>
+                <ellipse cx="160" cy="160" rx="10"  ry="4"/>
+                <path d="M160 160 Q140 140 120 100 Q100 60 110 30"/>
+                <path d="M160 160 Q180 140 200 100 Q220 60 210 30"/>
+                <path d="M160 160 Q155 130 150 90 Q145 50 155 20"/>
+                <path d="M160 160 Q165 130 170 90 Q175 50 165 20"/>
+                <path d="M20 210 Q60 195 100 200 Q140 205 160 200 Q180 195 220 200 Q260 205 300 210"/>
+                <path d="M30 230 Q70 218 110 222 Q145 226 160 222 Q175 218 210 222 Q250 226 290 230"/>
+                <path d="M10 250 Q50 240 90 244 Q130 248 160 244 Q190 248 230 244 Q270 240 310 250"/>
+                <path d="M0 270  Q40 262 80 265 Q120 268 160 265 Q200 268 240 265 Q280 262 320 270"/>
+                <path d="M0 290  Q40 285 80 287 Q120 289 160 287 Q200 289 240 287 Q280 285 320 290"/>
+              </g>
+
+              <!-- Orange area wash (subtle fill behind lines) -->
+              <rect id="washRect" x="0" y="320" width="320" height="0"
+                    fill="#FF4F00" opacity="0.08" clip-path="url(#fillClip)"/>
+            </svg>
+
+            <!-- Time display overlaid on topo -->
+            <div class="time-display-wrap">
+              <div class="time-display" id="timeDisplay" aria-live="polite" aria-label="Timer">25:00</div>
+              <div class="time-label"  id="timeLabel">Focus</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ── Controls ── -->
+      <div class="controls">
+        <button class="pill-btn primary large" id="playPauseBtn" aria-label="Start timer">
+          <span class="btn-icon play-icon">▶</span>
+          <span class="btn-text">Start</span>
+        </button>
+        <button class="pill-btn secondary" id="resetBtn" aria-label="Reset timer">↺ Reset</button>
+      </div>
+
+      <!-- ── Bail Out ── -->
+      <div class="bail-wrap">
+        <button class="pill-btn bail" id="bailBtn" aria-label="Bail out — save session and open Spotify">
+          🚨 Bail Out
+        </button>
+      </div>
+
+    </section>
+
+    <!-- ── STATS TAB ──────────────────────────────────────── -->
+    <section id="tab-stats" class="tab-panel hidden" role="tabpanel">
+
+      <h2 class="section-heading">Patrol Report</h2>
+
+      <!-- Summary cards -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value" id="statWeekHours">0h</div>
+          <div class="stat-label">This Week</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statLongest">0m</div>
+          <div class="stat-label">Longest Session</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statStreak">0</div>
+          <div class="stat-label">Day Streak 🔥</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statTotal">0</div>
+          <div class="stat-label">Total Sessions</div>
+        </div>
+      </div>
+
+      <!-- Scatter / dot chart: Patrol Hours last 7 days -->
+      <div class="chart-card">
+        <h3 class="chart-title">Patrol Hours — Last 7 Days</h3>
+        <div class="chart-wrap">
+          <canvas id="patrolChart" width="600" height="180" aria-label="Patrol hours chart" role="img"></canvas>
+        </div>
+      </div>
+
+      <!-- Session history -->
+      <div class="history-card">
+        <h3 class="history-title">Recent Sessions</h3>
+        <ul class="session-list" id="sessionList" aria-label="Session history">
+          <li class="session-item empty">No sessions yet — get after it! 🎯</li>
+        </ul>
+      </div>
+
+    </section>
+
+    <!-- ── SETTINGS TAB ───────────────────────────────────── -->
+    <section id="tab-settings" class="tab-panel hidden" role="tabpanel">
+
+      <h2 class="section-heading">Settings</h2>
+
+      <div class="settings-group">
+        <h3 class="settings-group-title">Timer</h3>
+
+        <label class="setting-row">
+          <span>Default Preset</span>
+          <select id="defaultPresetSel" class="pill-select">
+            <option value="focus">Focus 25</option>
+            <option value="study">Study 50</option>
+            <option value="pomodoro">Pomodoro</option>
+            <option value="custom">Custom</option>
+          </select>
+        </label>
+
+        <label class="setting-row">
+          <span>Pomodoro Work (min)</span>
+          <input type="number" id="pomoWorkMins" class="pill-input" min="1" max="90" value="25" />
+        </label>
+
+        <label class="setting-row">
+          <span>Pomodoro Break (min)</span>
+          <input type="number" id="pomoBreakMins" class="pill-input" min="1" max="30" value="5" />
+        </label>
+      </div>
+
+      <div class="settings-group">
+        <h3 class="settings-group-title">Audio &amp; Display</h3>
+
+        <div class="setting-row">
+          <span>Sound</span>
+          <label class="toggle-switch" aria-label="Toggle sound">
+            <input type="checkbox" id="soundToggle" checked />
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+
+        <div class="setting-row">
+          <span>Theme</span>
+          <label class="toggle-switch" aria-label="Toggle light theme">
+            <input type="checkbox" id="lightThemeToggle" />
+            <span class="toggle-track"></span>
+          </label>
+          <span class="toggle-label">Light</span>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <h3 class="settings-group-title">Sync</h3>
+
+        <label class="setting-row col">
+          <span>Endpoint URL</span>
+          <input type="url" id="syncEndpoint" class="pill-input full"
+                 placeholder="http://localhost:8099/sessions" />
+        </label>
+
+        <div class="setting-row">
+          <span id="syncQueueLabel">Queue: 0 pending</span>
+          <button class="pill-btn secondary small" id="syncNowBtn">Sync Now</button>
+        </div>
+      </div>
+
+      <p class="settings-note">
+        Session data is saved locally in your browser. The sync endpoint is optional — if it's unreachable, data is queued and retried automatically.
+      </p>
+
+    </section>
+
+  </div><!-- /#app -->
+
+  <!-- ══════════════════════════════════════════════════════════════
+       COMPLETION OVERLAY
+  ══════════════════════════════════════════════════════════════ -->
+  <div id="completionOverlay" class="overlay hidden" role="dialog" aria-modal="true" aria-label="Session complete">
+    <div class="overlay-inner">
+      <div class="completion-anim" aria-hidden="true">
+        <div class="burst-ring ring1"></div>
+        <div class="burst-ring ring2"></div>
+        <div class="burst-ring ring3"></div>
+        <div class="completion-icon">✅</div>
+      </div>
+      <h1 class="completion-title">10-4!</h1>
+      <p class="completion-subtitle">Session Complete</p>
+      <div class="completion-summary" id="completionSummary">
+        <div class="summary-row"><span>Type</span><span id="sumType">—</span></div>
+        <div class="summary-row"><span>Duration</span><span id="sumDuration">—</span></div>
+        <div class="summary-row"><span>Date</span><span id="sumDate">—</span></div>
+      </div>
+      <button class="pill-btn primary large" id="dismissBtn">Copy 10-4 ✓</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
